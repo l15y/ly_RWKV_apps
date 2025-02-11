@@ -135,7 +135,7 @@
 						<v-radio :key="i" v-for="n,i in adapters" :label="n" :value="i"></v-radio>
 					</v-radio-group>
 				</v-card-text>
-				<v-btn type="submit" color="bule" dark size="x-large" @click="load()" :loaing="loading">
+				<v-btn type="submit" color="bule" dark size="x-large" @click="load()" :loading="loading">
 					加载
 				</v-btn>
 			</v-card>
@@ -178,8 +178,8 @@
 				},
 
 				async load() {
-					loading = true
-					await fetch("/admin/models/load", {
+					app.loading = true
+					console.log(await fetch("/admin/models/load", {
 						"headers": {
 							"accept": "*/*",
 							"authorization": "Bearer /admin/models/load",
@@ -194,8 +194,8 @@
 							 "state": this.selectedState.map(i => ({ path: i }))
 						}),
 						"method": "POST",
-					});
-					loading = false
+					}))
+					app.loading = false
 				},
 				isStateShowen(text) {
 					try {

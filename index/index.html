@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>LRA </title>
+
+  <meta charset="utf-8">
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=900,  user-scalable=no">
+  <link rel="shortcut icon" href="favicon.png" />
+  <link href="static/mdi_font/css/materialdesignicons.min.css" rel="stylesheet">
+
+  <!-- <link rel="manifest" href="manifest.json" /> -->
+  <link href="static/vuetify.min.css" rel="stylesheet">
+  <script src="static/vue.min.js"></script>
+  <script src="static/vuetify.min.js"></script>
+  <style>
+    html,
+    body,
+    #app {
+      overflow: hidden;
+      height: 100%;
+    }
+
+    header.v-sheet.theme--dark.v-toolbar.primary {
+      height: 64px !important;
+    }
+
+    .v-window-item {
+      min-height: -webkit-fill-available;
+    }
+
+    .v-application--wrap {
+      display: unset;
+      user-select: none;
+    }
+
+    [v-cloak] {
+      display: none;
+    }
+
+    .v-tabs--vertical>.v-tabs-bar {
+      height: 100%;
+    }
+
+    .v-tabs {
+      width: 200px;
+      position: absolute;
+      display: unset;
+      height: calc(100% - 64px);
+    }
+
+    .v-tab .v-icon {
+      margin-right: 0.5em;
+    }
+
+    .v-tab--active .v-icon {
+      margin-right: 1em;
+    }
+
+    iframe {
+      border: 0;
+      left: 200px;
+      position: absolute;
+      width: calc(100% - 200px);
+      height: calc(100% - 64px);
+      top: 64px;
+    }
+
+    .v-tab {
+      justify-content: unset;
+
+    }
+
+    .export_btn {
+      margin: 0 !important;
+      opacity: 0;
+    }
+
+    .export_btn:hover {
+      opacity: 1 !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app" v-cloak>
+    <v-app>
+
+      <v-toolbar dark color="primary">
+        <v-toolbar-title>LY RWKV APPS </v-toolbar-title>
+      </v-toolbar>
+
+      <v-tabs vertical v-model="tab" background-color="primary" dark>
+        <v-tabs-slider color="white"></v-tabs-slider>
+
+        <v-tab v-for="(item, index) in pages">
+          <v-icon text> mdi-{{item.icon}} </v-icon>{{item.title}}<v-spacer></v-spacer>
+          <v-icon v-if="index<pages.length" text class="export_btn" @click="open(item.src)">mdi-export-variant </v-icon>
+          <v-icon v-if="index>=pages.length" text class="export_btn" @click="del(index-pages.length)">mdi-delete-outline
+          </v-icon>
+
+        </v-tab>
+      </v-tabs>
+
+      <v-slide-x-reverse-transition v-for="(item, index) in pages">
+        <iframe :src="item.src" v-show="tab==index" v-if="lazy_load(index)"></iframe>
+      </v-slide-x-reverse-transition>
+    </v-app>
+  </div>
+  <script>
+    get_tab = () => localStorage["LRA_tab"] == undefined ? 0 : 1 * localStorage["LRA_tab"]
+    lazys = [get_tab()]
+    pages = [
+      { src: 'cot.html', title: '思维链', icon: 'typewriter' },
+      { src: 'search.html', title: '搜索', icon: 'search-web' },
+      { src: 'translate.html', title: '翻译', icon: 'translate' },
+      { src: 'chat.html', title: '对话', icon: 'chat' },
+      { src: 'loader.html', title: '加载模型', icon: 'head-sync-outline' },
+    ]
+    window.app = new Vue({
+      el: '#app',
+      vuetify: new Vuetify(),
+      data: () => {
+        let data
+        data = {
+          tab: get_tab(),
+          pages: pages,
+        }
+
+        return data
+      },
+      watch: {
+        tab: tab => {
+          localStorage["LRA_tab"] = tab
+          if (!(lazys.find(i => i == tab)))
+            lazys.push(tab)
+        }
+      },
+      methods: {
+        lazy_load: tab => lazys.find(i => i == tab) > -1
+      }
+    })
+
+  </script>
+
+</body>
+
+</html>

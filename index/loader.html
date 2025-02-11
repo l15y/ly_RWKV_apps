@@ -1,0 +1,226 @@
+<html>
+
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=650,  user-scalable=no">
+	<link rel="shortcut icon" href="#" />
+
+	<link href="static/mdi_font/css/materialdesignicons.min.css" rel="stylesheet">
+	<link href="static/vuetify.min.css" rel="stylesheet">
+	<script src="static/vue.min.js"></script>
+	<script src="static/vuetify.min.js"></script>
+	<script src="static/markdown-it.min.js"></script>
+	<style>
+		div {
+
+			transition: all 2s ease;
+		}
+
+		.v-sheet.v-card {
+			margin: 20px;
+			padding: 10px;
+		}
+
+		.logo-center {
+			left: calc(50% - 140px);
+			width: 280px;
+			font-size: 4em;
+			padding-top: 2.5em;
+			padding-bottom: 0.8em;
+			position: relative;
+		}
+
+		.logo-left {
+			left: 20px;
+			width: 100%;
+			font-size: xx-large;
+			position: relative;
+		}
+
+		.input-box {
+			margin: auto;
+			width: fit-content;
+			min-width: 580px;
+		}
+
+		pre {
+			margin: 20px;
+			white-space: break-spaces;
+		}
+
+		.v-application--wrap {
+			display: unset;
+		}
+
+		pre:has(code) {
+			background-color: rgb(0 0 0);
+			color: white;
+			padding: 3px;
+			border-radius: 5px;
+		}
+
+		code::before {
+			content: attr(class);
+			color: yellow;
+			float: right;
+		}
+
+		.slide-fade-enter-active {
+			transition: all 2s ease;
+		}
+
+		.slide-fade-leave-active {
+			transition: all .8s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+		}
+
+		.slide-fade-enter,
+		.slide-fade-leave-to {
+			transform: translateX(10px);
+			opacity: 0;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="app" v-cloak>
+		<v-app>
+			<!-- 搜索输入区域 -->
+			<!-- <v-form @submit.prevent="submit">
+				<v-row class="input-box">
+					<v-col cols="10">
+						<v-textarea autofocus v-model="query" :label="promptLabel" no-resize auto-grow rows="1"
+							hide-details @keydown.enter.prevent="submit"></v-textarea>
+					</v-col>
+					<v-col cols="2">
+					</v-col>
+				</v-row>
+			</v-form> -->
+
+			<v-row>
+				<v-col cols="6">
+					<v-card class="mb-2" elevation="2">
+						<v-card-title>模型</v-card-title>
+						<v-divider></v-divider>
+						<v-card-text>
+							<v-radio-group v-model="iModel" @change="selectedState=[]">
+								<v-radio :key="i" v-for="n,i in calcedModels" :label="n.name" :value="i"></v-radio>
+							</v-radio-group>
+						</v-card-text>
+					</v-card>
+				</v-col>
+				<v-col cols="6">
+					<v-card class="mb-2" elevation="2">
+						<v-card-title>State</v-card-title>
+						<v-divider></v-divider>
+						<v-card-text>
+							<v-container fluid>
+								<v-checkbox v-model="selectedState" :key="i" v-for="n,i in calcedState" hide-details
+									:label="n.name.replace('.state','')" v-show="isStateShowen(n)"
+									:value="n.name"></v-checkbox>
+							</v-container>
+						</v-card-text>
+					</v-card>
+				</v-col>
+			</v-row>
+
+			<v-card class="mb-2" elevation="2">
+				<v-card-title>后端</v-card-title>
+				<v-divider></v-divider>
+				<v-card-text>
+					<v-radio-group v-model="iAdapter">
+						<v-radio :key="i" v-for="n,i in adapters" :label="n" :value="i"></v-radio>
+					</v-radio-group>
+				</v-card-text>
+				<v-btn type="submit" color="bule" dark size="x-large" @click="load()" :loaing="loading">
+					加载
+				</v-btn>
+			</v-card>
+
+			<v-snackbar v-model="showSnackbar" :timeout="3000">
+				{{ snackbarText }}
+			</v-snackbar>
+		</v-app>
+	</div>
+
+	<script>
+		const app = new Vue({
+			el: '#app',
+			vuetify: new Vuetify(),
+			data: () => ({
+				models: [],
+				iModel: 0,
+				selectedState: [],
+
+				adapters: [],
+				iAdapter: 0,
+
+				showSnackbar: false,
+				snackbarText: '',
+				loading: false
+			}),
+			computed: {
+				calcedModels() {
+					return this.models.filter((i) => i.name.endsWith("st") || i.name.endsWith("prefab"))
+				},
+				calcedState() {
+					return this.models.filter((i) => i.name.endsWith("state"))
+				},
+			},
+			methods: {
+
+				showMessage(text) {
+					this.snackbarText = text
+					this.showSnackbar = true
+				},
+
+				async load() {
+					loading = true
+					await fetch("/admin/models/load", {
+						"headers": {
+							"accept": "*/*",
+							"authorization": "Bearer /admin/models/load",
+							"content-type": "application/json",
+						},
+						"body": JSON.stringify({
+							"model_path": this.calcedModels[this.iModel].name,
+							"adapter": { "Manual": this.iAdapter },
+							"quant_type": "None", "quant": 0, "turbo": true, 
+							"token_chunk_size": 128, "max_batch": 16,
+							 "tokenizer_path": "assets/tokenizer/rwkv_vocab_v20230424.json", "embed_device": "Cpu", "precision": "Fp16", "lora": [],
+							 "state": this.selectedState.map(i => ({ path: i }))
+						}),
+						"method": "POST",
+					});
+					loading = false
+				},
+				isStateShowen(text) {
+					try {
+						return text.name.toLowerCase().indexOf(this.calcedModels[this.iModel].name.match(/\d+[bB]/)[0].toLowerCase()) > -1
+					} catch (error) {
+						return true
+					}
+				},
+			}
+		})
+
+		reader = async (url) => {
+			const response = await fetch(url)
+			const data = await response.json()
+			return data
+		}
+
+		read = async () => {
+			app.models = await reader("/api/models/list")
+			// app.info = await reader("http://127.0.0.1:65530/api/models/info")
+			app.adapters = await reader("/api/adapters")
+		}
+		read()
+	</script>
+	<script src="wd_sdk.js"></script>
+</body>
+
+</html>

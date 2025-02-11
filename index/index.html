@@ -114,11 +114,12 @@
     get_tab = () => localStorage["LRA_tab"] == undefined ? 0 : 1 * localStorage["LRA_tab"]
     lazys = [get_tab()]
     pages = [
+      { src: 'chat.html', title: '对话', icon: 'chat' },
       { src: 'cot.html', title: '思维链', icon: 'typewriter' },
       { src: 'search.html', title: '搜索', icon: 'search-web' },
       { src: 'translate.html', title: '翻译', icon: 'translate' },
-      { src: 'chat.html', title: '对话', icon: 'chat' },
       { src: 'loader.html', title: '加载模型', icon: 'head-sync-outline' },
+      { src: 'ai00.html', title: 'AI00', icon: 'glasses' },
     ]
     window.app = new Vue({
       el: '#app',

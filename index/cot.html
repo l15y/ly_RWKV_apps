@@ -594,13 +594,13 @@
           if (s.length == 1) {
 
             if (content.indexOf("<think>") > -1)
-              return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>") + "</think>"
-            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
+              return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>") + "</think>"
+            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>")
           }
           if (s.length > 2) {
-            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
+            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>")
           }
-          return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>") + "</think>" + md.render(s[1]).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
+          return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>") + "</think>" + md.render(s[1]).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
         },
       },
     });

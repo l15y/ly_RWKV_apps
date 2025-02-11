@@ -100,44 +100,44 @@
 				</v-row>
 			</v-form> -->
 
-			<v-row>
-				<v-col cols="6">
-					<v-card class="mb-2" elevation="2">
-						<v-card-title>模型</v-card-title>
-						<v-divider></v-divider>
-						<v-card-text>
+			<v-card class="mb-2" elevation="2">
+				<v-card-title>模型</v-card-title>
+				<v-divider></v-divider>
+				<v-card-text>
+					<v-row>
+						<v-col cols="8">
 							<v-radio-group v-model="iModel" @change="selectedState=[]">
 								<v-radio :key="i" v-for="n,i in calcedModels" :label="n.name" :value="i"></v-radio>
 							</v-radio-group>
-						</v-card-text>
-					</v-card>
-				</v-col>
-				<v-col cols="6">
-					<v-card class="mb-2" elevation="2">
-						<v-card-title>State</v-card-title>
-						<v-divider></v-divider>
-						<v-card-text>
-							<v-container fluid>
-								<v-checkbox v-model="selectedState" :key="i" v-for="n,i in calcedState" hide-details
-									:label="n.name.replace('.state','')" v-show="isStateShowen(n)"
-									:value="n.name"></v-checkbox>
-							</v-container>
-						</v-card-text>
-					</v-card>
-				</v-col>
-			</v-row>
+						</v-col>
+						<v-col cols="4">
+							<v-checkbox v-model="selectedState" :key="i" v-for="n,i in calcedState" hide-details
+								:label="n.name.replace('.state','')" v-show="isStateShowen(n)"
+								:value="n.name"></v-checkbox>
+						</v-col>
+					</v-row>
+				</v-card-text>
+			</v-card>
 
 			<v-card class="mb-2" elevation="2">
-				<v-card-title>后端</v-card-title>
+				<v-card-title>
+					<v-row>
+						<v-col cols="6">
+							后端
+						</v-col>
+						<v-col cols="6" style="text-align: right;"><v-btn type="submit" color="primary" dark
+								size="x-large" @click="load()" :loading="loading">
+								加载
+							</v-btn>
+						</v-col>
+					</v-row></v-card-title>
 				<v-divider></v-divider>
 				<v-card-text>
 					<v-radio-group v-model="iAdapter">
 						<v-radio :key="i" v-for="n,i in adapters" :label="n" :value="i"></v-radio>
 					</v-radio-group>
 				</v-card-text>
-				<v-btn type="submit" color="bule" dark size="x-large" @click="load()" :loading="loading">
-					加载
-				</v-btn>
+
 			</v-card>
 
 			<v-snackbar v-model="showSnackbar" :timeout="3000">
@@ -188,10 +188,10 @@
 						"body": JSON.stringify({
 							"model_path": this.calcedModels[this.iModel].name,
 							"adapter": { "Manual": this.iAdapter },
-							"quant_type": "None", "quant": 0, "turbo": true, 
+							"quant_type": "None", "quant": 0, "turbo": true,
 							"token_chunk_size": 128, "max_batch": 16,
-							 "tokenizer_path": "assets/tokenizer/rwkv_vocab_v20230424.json", "embed_device": "Cpu", "precision": "Fp16", "lora": [],
-							 "state": this.selectedState.map(i => ({ path: i }))
+							"tokenizer_path": "assets/tokenizer/rwkv_vocab_v20230424.json", "embed_device": "Cpu", "precision": "Fp16", "lora": [],
+							"state": this.selectedState.map(i => ({ path: i }))
 						}),
 						"method": "POST",
 					}))

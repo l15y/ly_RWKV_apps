@@ -1,0 +1,1 @@
+import{T as s}from"./List-2mfspb9y.js";import{u as a}from"./Store-BR4GAKW-.js";import{h as t,af as o,i as r,o as e,A as m,k as i}from"./index-BdOslMqv.js";const l=t({__name:"label",setup(t){const l=a(),n=o();return r((()=>n.params.id),(s=>{l.currentLabel=s})),(a,t)=>(e(),m(s,{tasks:i(l).getLabelTodos},null,8,["tasks"]))}});export{l as default};

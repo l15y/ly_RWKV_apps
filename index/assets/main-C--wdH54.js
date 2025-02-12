@@ -1,0 +1,1 @@
+import{T as s}from"./List-2mfspb9y.js";import{u as t}from"./Store-BR4GAKW-.js";import{h as o,o as a,A as r,k as e}from"./index-BdOslMqv.js";const m=o({__name:"main",setup(o){const m=t();return(t,o)=>(a(),r(s,{tasks:e(m).getTodoList},null,8,["tasks"]))}});export{m as default};

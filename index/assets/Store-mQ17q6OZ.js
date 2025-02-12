@@ -1,0 +1,1 @@
+import{ae as e}from"./index-BdOslMqv.js";const t=e({id:"lunwen",state:()=>({apiKey:"",chatHistory:[],apiKeyDialog:!1,Sidebar:!0,nowchat:"",isChatting:!1,settings:!0,serverip:"127.0.0.1:3000",Max_Tokens:1e3,TOP_P:.5,Temperature:1,Presence:.3,Frequency:.3,Penalty:400,Model:"",AIimg:"",title:"",tigang:"",tigangs:[]}),getters:{},actions:{}});export{t as u};

@@ -1,0 +1,1 @@
+import{T as s}from"./List-2mfspb9y.js";import{u as t}from"./Store-BR4GAKW-.js";import{h as o,o as e,A as a,k as r}from"./index-BdOslMqv.js";const m=o({__name:"completed",setup(o){const m=t();return(t,o)=>(e(),a(s,{tasks:r(m).getCompletedTodos},null,8,["tasks"]))}});export{m as default};

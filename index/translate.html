@@ -196,7 +196,7 @@
 			rules.forEach(i => {
 				input = input.replaceAll(i.术语, i.译文)
 			})
-			let prompt = make_prompt(input, `${lang}:\n`, `翻译成${lang}`)
+			let prompt = make_prompt(input, `${lang}: \n`, `翻译成${lang}`)
 			app.loading = true
 			if (app.b逐段模式) {
 				inputs = input.split('\n')

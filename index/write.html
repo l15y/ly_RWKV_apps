@@ -1,0 +1,179 @@
+<html>
+
+<head>
+	<title>写作</title>
+	<meta charset="utf-8">
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="mobile-web-app-capable" content="yes" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=650,  user-scalable=no">
+	<link rel="shortcut icon" href="favicon.png" />
+	<link href="static/mdi_font/css/materialdesignicons.min.css" rel="stylesheet">
+	<link href="static/vuetify.min.css" rel="stylesheet">
+	<script src="static/vue.js"></script>
+	<script src="static/vuetify.min.js"></script>
+	<style>
+		.v-sheet.v-card {
+			margin: 20px;
+			padding: 10px;
+		}
+
+		[v-cloak] {
+			display: none;
+		}
+
+		.v-application--wrap {
+			display: unset;
+		}
+
+		.v-menu__content {
+			box-shadow: unset;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="app" v-cloak>
+		<v-app>
+			<v-toolbar color="elevation-2" style="position: fixed;top: 0;z-index: 1;width: 100%;">
+				<v-toolbar-title style="font-size: xx-large;font-weight: bolder;">写作</v-toolbar-title>
+				<v-spacer></v-spacer>
+
+				<v-btn-toggle v-model="i风格" mandatory dark dense class="mx-1">
+					<v-btn v-for="i in l风格" v-text="i" dark color="primary"> </v-btn>
+				</v-btn-toggle>
+				<v-menu open-on-hover bottom offset-y transition="slide-y-transition">
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn color="primary" dark v-bind="attrs" v-on="on">
+							插入模板
+						</v-btn>
+					</template>
+					<v-list>
+						<v-list-item v-for="(item, index) in insert_templetes" :key="index"
+							@click="insert_templete(item)">
+							<v-list-item-title>{{ item.title }}</v-list-item-title>
+						</v-list-item>
+					</v-list>
+				</v-menu>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon @click="f复制正文()" v-bind="attrs" v-on="on" color="blue"
+							:disabled="new_content.length==0||loading">
+							<v-icon>mdi-content-copy</v-icon>
+						</v-btn>
+					</template>
+					<span>复制{{new_content||"生成内容"}}</span>
+				</v-tooltip>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon @click="f续写(['\n'])" v-bind="attrs" v-on="on" :loading="loading" color="blue"
+							:disabled="s内容.length<10">
+							<v-icon>mdi-arrow-collapse-down</v-icon>
+						</v-btn>
+					</template>
+					<span>续写一段</span>
+				</v-tooltip>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon @click="f续写(['\n','。'])" v-bind="attrs" v-on="on" :loading="loading" color="blue"
+							:disabled="s内容.length<5">
+							<v-icon>mdi-arrow-collapse-right</v-icon>
+						</v-btn>
+					</template>
+					<span>续写一句</span>
+				</v-tooltip>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon @click="f终止()" v-bind="attrs" v-on="on" color="blue" :disabled="!loading">
+							<v-icon>mdi-stop-circle-outline</v-icon>
+						</v-btn>
+					</template>
+					<span>停止</span>
+				</v-tooltip>
+			</v-toolbar>
+			<br>
+			<br>
+			<br>
+			<v-textarea class="pa-5" counter :loading="loading" auto-grow solo v-model="s内容" label="内容"
+				:disabled="loading" rows="10" hide-details="auto"></v-textarea>
+			<v-snackbar v-model="b显示提示文本" :timeout="3000" style="white-space: pre-line">{{s提示文本}}</v-snackbar>
+		</v-app>
+	</div>
+	<script src="wd_sdk.js"></script>
+	<script>
+		app = new Vue({
+			el: '#app',
+			vuetify: new Vuetify(),
+			data: () => ({
+				s内容: localStorage["wenda_clxx_content"] || "",
+				loading: false,
+				// 是否显示snackbar
+				b显示提示文本: false,
+				// snackbar的文本
+				s提示文本: "",
+				temperature: 2,
+				top_p: 0.5,
+				max_length: 3000,
+				new_content: '',
+				l风格: '灵活 适中 稳定'.split(' '),
+				i风格: 1,
+				insert_templetes: [
+					{ title: '对话', content: `${templates.user}{content}${templates.eos}${templates.assistant.replace(' ', '')}` },
+					{ title: '强制回答', content: `${templates.user}{content}${templates.eos}${templates.assistant}，好的` },
+					{ title: '分点回答', content: `${templates.user}{content}${templates.eos}${templates.assistant}\n 1.` },
+					{ title: '系统提示', content: `${templates.system}${templates.eos}{content}` },
+				],
+			}),
+			methods: {
+				insert_templete(templete) {
+					app.s内容 = templete.content.replace("{content}", app.s内容)
+				}
+			},
+			watch: {
+				s内容: s => {
+					localStorage["wenda_clxx_content"] = s
+				},
+			}
+		})
+		f续写 = async (stop_prompt) => {
+			if (app.i风格 == 0) {
+				app.temperature = 1.2
+				app.top_p = 0.9
+			}
+			else if (app.i风格 == 1) {
+				app.temperature = 0.6
+				app.top_p = 0.6
+			}
+			else if (app.i风格 == 2) {
+				app.temperature = 0.1
+				app.top_p = 0.1
+			}
+			let old = app.s内容
+			let prompt = old
+			app.loading = true
+			abort_reaon = null
+			await send_prompt(templates.skip_think_prompt + prompt, stop_prompt, (s) => {
+				app.s内容 = old + s;
+				app.new_content = s
+			})
+			if (abort_reaon) {
+				app.s内容 += abort_reaon
+			}
+			app.loading = false
+		}
+		f复制正文 = async () => {
+			copy(app.new_content)
+		}
+		f终止 = async () => {
+			app.loading = false
+			controller.abort()
+		}
+		alert = (text) => {
+			app.s提示文本 = text; //.replace(/\n/g,"<br>")
+			app.b显示提示文本 = true;
+		}
+
+	</script>
+</body>
+
+</html>

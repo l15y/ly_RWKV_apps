@@ -90,7 +90,13 @@
     <v-app>
 
       <v-toolbar dark color="primary">
-        <v-toolbar-title>LY RWKV APPS </v-toolbar-title>
+        <v-tooltip >
+          <template v-slot:activator="{ on, attrs }">
+            <v-toolbar-title v-bind="attrs" v-on="on" @click="open('https://github.com/l15y/ly_RWKV_apps')">LY RWKV APPS
+            </v-toolbar-title>
+          </template>
+          <span>View on Github</span>
+        </v-tooltip>
       </v-toolbar>
 
       <v-tabs vertical v-model="tab" background-color="primary" dark>

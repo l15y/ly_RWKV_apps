@@ -1,0 +1,35 @@
+.theme--light.v-application code {
+    background-color: unset;
+    font-family: Roboto, sans-serif;
+}
+pre:has(code) {
+  padding: 13px;
+  border-radius: 5px;
+  background-color: rgb(0 0 0 / 12%)!important;
+}
+
+think::before {
+  content: "思考";
+  color: yellow;
+  float: right;
+}
+
+think {
+  padding: 3px;
+  border-radius: 5px;
+  color: #001e67;
+  background-color: #e0e0e0;
+  display: block;
+}
+
+
+code{
+  /* color: yellow!important; */
+  padding: 0 !important;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+[v-cloak] {
+  display: none;
+}

@@ -10,9 +10,12 @@
   <link href="static/mdi_font/css/materialdesignicons.min.css" rel="stylesheet" />
 
   <link href="static/vuetify.min.css" rel="stylesheet" />
+  <link href="static/highlight.min.css" rel="stylesheet" />
+  <link href="common.css" rel="stylesheet" />
   <script src="static/vue.min.js"></script>
   <script src="static/vuetify.min.js"></script>
   <script src="static/markdown-it.min.js"></script>
+  <script src="static/highlight.min.js"></script>
   <style>
     .v-navigation-drawer__content::-webkit-scrollbar {
       width: 5px;
@@ -61,30 +64,6 @@
       line-height: 1.2;
     }
 
-    pre:has(code) {
-      background-color: rgb(0 0 0);
-      color: white;
-      padding: 3px;
-      border-radius: 5px;
-    }
-
-    code::before {
-      content: attr(class);
-      color: yellow;
-      float: right;
-    }
-
-    code.language-think::before {
-      content: "思考";
-      color: yellow;
-      float: right;
-    }
-
-    code {
-      padding: unset !important;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
 
     .ask {
       margin-left: auto;
@@ -138,10 +117,6 @@
     html,
     .v-window__container {
       background-color: #0001;
-    }
-
-    [v-cloak] {
-      display: none;
     }
 
     .v-tabs-items {
@@ -270,6 +245,7 @@
       <v-toolbar v-if="show_header" style="opacity: 80%">
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <v-toolbar-title style="font-size: xx-large; font-weight: bolder;color: black;">自由对话</v-toolbar-title>
+        <b style="color: #0000002b;display: inline-block;">{{modele_name}}</b>
         <v-spacer></v-spacer>
         <div class="chat_toolbar">
           <b style="
@@ -323,6 +299,16 @@
               </div>
             </template>
             <span>强制打开思维链</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <div v-bind="attrs" v-on="on">
+                <v-icon :color="forceZhCOT?'green':''" text @click="forceZhCOT=!forceZhCOT" large v-if="forceCOT">
+                  mdi-ideogram-cjk
+                </v-icon>
+              </div>
+            </template>
+            <span>强制中文思考</span>
           </v-tooltip>
           <v-tooltip bottom v-if="(!loading)&&(chat.length>0)">
             <template v-slot:activator="{ on, attrs }">
@@ -447,6 +433,7 @@
       </v-dialog>
     </v-app>
   </div>
+  <script src="../wd_sdk.js"></script>
   <script>
     func = [
       {
@@ -513,6 +500,7 @@
           autos: [],
           noCOT: false,
           forceCOT: false,
+          forceZhCOT: true,
           // 是否开启语音合成
           tts_on: false,
           // 是否开启语音识别
@@ -528,11 +516,11 @@
           // 当前选中的tab
           tab: 0,
           // 生成回答的温度
-          temperature: 0.5,
+          temperature: 1,
           // 生成回答的最大长度
-          max_length: 4096,
+          max_length: 40960,
           // 生成回答的top_p
-          top_p: 0.5,
+          top_p: 0.3,
           //classifier free guidence 因子，当前仅支持rwkv
           cfg_factor: 1,
           // 语言模型类型
@@ -572,14 +560,19 @@
         };
       },
       methods: {
-        md2html: (conent) => {
-          // return conent
-          conent = String(conent);
-          let md = new markdownit();
-          // md.disable(['link', 'image'])
-          return md.render(conent.replace("<think>", '```think\n').replace(/\n{0,1}<\/think>/, '\n```')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
-        },
+        md2html: md2html,
       },
+      computed: {
+        modele_name() {
+          try {
+
+            return this.server_models.filter(i => i.use)[0].name
+          } catch (error) {
+
+          }
+          return ""
+        }
+      }
     });
     //获取用户输入
     input = async (title = '请输入', input = '') => {
@@ -655,8 +648,8 @@
     // 将用户的输入发送到服务器并更新 app 的 chat 数组
     // 参数s为用户输入的内容，keyword为用户输入的关键词，show为是否显示用户输入的内容，sources为知识库的来源
     send = async (s, keyword = "", show = true, sources = [], addition_args = {}) => {
-      addition_args.old = app.noCOT?templates.skip_think_prompt:""
-      addition_args.old = app.forceCOT?templates.begin_think_prompt:""
+      addition_args.old = app.noCOT ? templates.skip_think_prompt : ""
+      addition_args.old = app.forceCOT ? templates.begin_think_prompt + (app.forceZhCOT ? "嗯，" : "Okay,") : ""
       app.question = ''
       if (keyword == "") keyword = s;
       is_abord = false;
@@ -691,7 +684,7 @@
       setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
       let last_token_time = Date.now()
       await send_raw(s.replace(/\r\n/g, "\n"), keyword, QA_history, (message) => {
-        current_session.content = addition_args.old +message;
+        current_session.content = addition_args.old + message;
 
       }, addition_args);
       app.loading = false;
@@ -702,7 +695,6 @@
 
     let tts_start_index = 0
   </script>
-  <script src="../wd_sdk.js"></script>
   <script>
     alert = (text) => {
       app.snackbar_text = text; //.replace(/\n/g,"<br>")
@@ -712,7 +704,7 @@
     save_history = () => {
       localStorage["rzyzzgjj_chat_history"] = JSON.stringify(app.chat);
     };
-    if (typeof templates=='undefined') {
+    if (typeof templates == 'undefined') {
       templates = {
         eos: "<｜end▁of▁sentence｜>",
         user: "<｜User｜>",

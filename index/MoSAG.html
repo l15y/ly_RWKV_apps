@@ -1,7 +1,7 @@
 <html>
 
 <head>
-  <title>RWKV COT chat</title>
+  <title>MoSAG</title>
   <meta charset="utf-8" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -10,9 +10,12 @@
   <link href="static/mdi_font/css/materialdesignicons.min.css" rel="stylesheet" />
 
   <link href="static/vuetify.min.css" rel="stylesheet" />
+  <link href="static/highlight.min.css" rel="stylesheet" />
+  <link href="common.css" rel="stylesheet" />
   <script src="static/vue.min.js"></script>
   <script src="static/vuetify.min.js"></script>
   <script src="static/markdown-it.min.js"></script>
+  <script src="static/highlight.min.js"></script>
   <style>
     .v-navigation-drawer__content::-webkit-scrollbar {
       width: 5px;
@@ -35,8 +38,8 @@
     }
 
     /* 滑轨两头的监听按钮颜色 */
-    .Assistant th,
-    .Assistant td {
+    .answer th,
+    .answer td {
       outline: 1px solid;
       padding: 2px;
     }
@@ -46,13 +49,12 @@
       margin: 10px;
     }
 
-    .Assistant table {
+    .answer table {
       outline: 1px solid;
     }
 
-    .User,
-    .Assistant,
-    .System {
+    .ask,
+    .answer {
       padding: 1em;
       background: #fff;
       border-radius: 16px;
@@ -62,54 +64,8 @@
       line-height: 1.2;
     }
 
-    .System {
-      background: #fff;
-      max-width: 100%;
-      width: 100%;
-      margin: 0 10px;
-      /* max-height: 1em; */
-      transition: max-height 1s;
-      overflow: hidden;
-    }
 
-    /* .System:hover {
-      max-height: 50em;
-    } */
-
-    think::before {
-      content: "思考";
-      color: yellow;
-      float: right;
-    }
-
-    think {
-      padding: 3px;
-      border-radius: 5px;
-      color: #001e67;
-      background-color: #e0e0e0;
-      display: block;
-    }
-
-    pre:has(code) {
-      background-color: rgb(0 0 0);
-      color: white;
-      padding: 3px;
-      border-radius: 5px;
-    }
-
-    code::before {
-      content: attr(class);
-      color: yellow;
-      float: right;
-    }
-
-    code {
-      padding: unset !important;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-
-    .User {
+    .ask {
       margin-left: auto;
       white-space: break-spaces;
     }
@@ -120,7 +76,7 @@
       position: unset;
     }
 
-    .Assistant img {
+    .answer img {
       max-width: 100%;
     }
 
@@ -161,10 +117,6 @@
     html,
     .v-window__container {
       background-color: #0001;
-    }
-
-    [v-cloak] {
-      display: none;
     }
 
     .v-tabs-items {
@@ -292,7 +244,7 @@
       </v-navigation-drawer>
       <v-toolbar v-if="show_header" style="opacity: 80%">
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
-        <v-toolbar-title style="font-size: xx-large; font-weight: bolder;color: black;">RWKV COT chat</v-toolbar-title>
+        <v-toolbar-title style="font-size: xx-large; font-weight: bolder;color: black;">MoSAG</v-toolbar-title>
         <v-spacer></v-spacer>
         <div class="chat_toolbar">
           <b style="
@@ -330,12 +282,22 @@
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
               <div v-bind="attrs" v-on="on">
-                <v-icon :color="noCOT?'red':''" text @click="noCOT=!noCOT" large>
-                  mdi-link
+                <v-icon :color="noCOT?'red':''" text @click="noCOT=!noCOT" large v-if="!forceCOT">
+                  mdi-link-off
                 </v-icon>
               </div>
             </template>
             <span>强制跳过思维链</span>
+          </v-tooltip>
+          <v-tooltip bottom>
+            <template v-slot:activator="{ on, attrs }">
+              <div v-bind="attrs" v-on="on">
+                <v-icon :color="forceCOT?'green':''" text @click="forceCOT=!forceCOT" large v-if="!noCOT">
+                  mdi-link-lock
+                </v-icon>
+              </div>
+            </template>
+            <span>强制打开思维链</span>
           </v-tooltip>
           <v-tooltip bottom v-if="(!loading)&&(chat.length>0)">
             <template v-slot:activator="{ on, attrs }">
@@ -360,7 +322,7 @@
       <br /><br /><br />
       <div v-for="(current_conversation, index) in chat" :key="index"
         :class="['d-flex flex-row align-center my-2', current_conversation.role == 'User' ? 'justify-end': null]">
-        <span v-if="current_conversation.role == 'User'" :class="current_conversation.role"
+        <span v-if="current_conversation.role == 'User'" class="ask"
           v-text="current_conversation.keyword||current_conversation.content"></span>
         <v-hover v-slot="{ hover }">
           <div style="margin-bottom: auto;">
@@ -387,7 +349,7 @@
           </div>
         </v-hover>
 
-        <span v-if="current_conversation.role != 'User'" :class="current_conversation.role">
+        <span v-if="current_conversation.role != 'User'" class="answer">
           <div v-html="md2html(current_conversation.content)"></div>
           <template style="margin-top: 10px">
             <v-tooltip bottom v-for="source in current_conversation.sources" :max-width="500">
@@ -414,6 +376,11 @@
       <v-footer fixed class="pa-2">
 
         <v-row no-gutters>
+          <v-col cols="12" md="12">
+            <v-combobox v-model="selected_dbs_title" :items="dbTitles" label="选择state" multiple chips
+              dense></v-combobox>
+
+          </v-col>
           <v-col cols="8" md="11">
             <v-textarea hide-details no-resize rows="3" :loading="loading" :placeholder="func_mode.description" solo
               @keypress.enter="submit" v-model="question">
@@ -460,6 +427,7 @@
       </v-dialog>
     </v-app>
   </div>
+  <script src="../wd_sdk.js"></script>
   <script>
     func = [
       {
@@ -468,15 +436,16 @@
         question: "",
       },
     ];
-    nn_history = [{
-      "role": "System", "content":
-        `在回答之前使用 <think>...</think> 标签进行思考，思考包括对问题背景和隐含条件的猜测，格式为：\n<think>\n问题背景: ...\n隐含条件: ...\n</think>\n回答...`
-      ,
-    }]
+    nn_history = []
 
     app = new Vue({
       el: "#app",
       vuetify: new Vuetify(),
+      computed: {
+        dbTitles() {
+          return this.dbs.map(i => i.title)
+        },
+      },
       watch: {
         current_func: (current_func) => {
           current_func = app.func_menu.find((i) => i.name == current_func);
@@ -502,9 +471,9 @@
           // 用户输入的问题
           question: "",
           // 聊天记录
-          chat: JSON.parse(localStorage["rwkv_chat_history"] || JSON.stringify(nn_history)),
+          chat: JSON.parse(localStorage["MoSAG_chat_history"] || JSON.stringify(nn_history)),
           // 是否开启历史记录
-          history_on: true,
+          history_on: false,
           // 功能菜单
           func_menu: func,
           // 当前选中的功能
@@ -527,10 +496,7 @@
           // auto列表
           autos: [],
           noCOT: false,
-          // 是否开启语音合成
-          tts_on: false,
-          // 是否开启语音识别
-          sst_started: false,
+          forceCOT: false,
           // 测试知识库的提示
           test_zsk_prompt: "",
           // 测试知识库的步骤
@@ -542,11 +508,11 @@
           // 当前选中的tab
           tab: 0,
           // 生成回答的温度
-          temperature: 1,
+          temperature: 0.1,
           // 生成回答的最大长度
           max_length: 4096,
           // 生成回答的top_p
-          top_p: 0.3,
+          top_p: 0.1,
           //classifier free guidence 因子，当前仅支持rwkv
           cfg_factor: 1,
           // 语言模型类型
@@ -582,26 +548,12 @@
           l表格读取结果: [],
           b批量上传中: false,
           i批量上传进度: 0,
-          nodes: [],
+          dbs: [],
+          selected_dbs_title: []
         };
       },
       methods: {
-        md2html: (content) => {
-          // return conent
-          content = String(content);
-          let s = content.split("</think>")
-          let md = new markdownit();
-          if (s.length == 1) {
-
-            if (content.indexOf("<think>") > -1)
-              return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>") + "</think>"
-            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>")
-          }
-          if (s.length > 2) {
-            return md.render(content).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>")
-          }
-          return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>") + "</think>" + md.render(s[1]).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+!$/g, "<br>")
-        },
+        md2html: md2html,
       },
     });
     //获取用户输入
@@ -633,11 +585,11 @@
 
     // 从 app 的 chat 数组中删除当前的对话项并保存更新后的历史记录
     delete_current_conversation = (item) => {
-      app.chat.splice(app.chat.length - 2, 2);
+      app.chat.splice(Math.floor(app.chat.indexOf(item) / 2) * 2, 2);
       save_history();
     };
 
-    // 将 is_abord 标志设置为 true 并关闭 WebSocket 连接
+    // 将 is_abord 标志设置为 true 并关闭连接
     abort_chatting = () => {
       is_abord = true;
       app.loading = false
@@ -673,11 +625,19 @@
 
       submit();
     };
+
+
     // 将用户的输入发送到服务器并更新 app 的 chat 数组
     // 参数s为用户输入的内容，keyword为用户输入的关键词，show为是否显示用户输入的内容，sources为知识库的来源
     send = async (s, keyword = "", show = true, sources = [], addition_args = {}) => {
-      addition_args.state = "fd7a60ed-7807-449f-8256-bccae3246220"
-      addition_args.old = app.noCOT ? templates.skip_think_prompt : templates.begin_think_prompt
+
+      let selected_dbs = app.dbs.filter(i => app.selected_dbs_title.indexOf(i.title) > -1)
+      if (selected_dbs.length == 0) {
+        alert('没有选中state')
+        return
+      }
+      addition_args.old = app.noCOT ? templates.skip_think_prompt : ""
+      addition_args.old = app.forceCOT ? templates.begin_think_prompt : ""
       app.question = ''
       if (keyword == "") keyword = s;
       is_abord = false;
@@ -686,7 +646,6 @@
       let QA_history;
       // 如果历史记录开启,则将历史记录保存到 QA_history 中
       if (app.history_on) {
-
         QA_history = app.chat
         QA_history = QA_history.filter(i => !i.no_history)
       } else {
@@ -698,16 +657,30 @@
         app.chat.push(current_session);
       }
       setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
-      await send_raw(s.replace(/\r\n/g, "\n"), keyword, QA_history, (message) => {
-        current_session.content = //message
-          (app.noCOT ? '' : templates.begin_think_prompt) + message;
-        if (app.tts_on) {
-          speak_manager(current_session.content, isloading = true);
-        }
-      }, addition_args);
-      if (app.tts_on) {
-        speak_manager(current_session.content);
+      let returns = selected_dbs.map(i => ({ title: i.title, content: i.content, result: '……' }))
+      let display = () => {
+
+        current_session.content = returns.map(i => "**《" + i.title + "》**\n\n" + i.result).join('\n\n---\n\n')
       }
+      let promiseFunctions = returns.map(i => (async () => {
+        await send_raw(s.replace(/\r\n/g, "\n"), '', [{ role: 'system', content: i.content.replace(/\r\n/g, "\n") }], (message) => {
+          i.result = message;
+          display()
+        }, { old: '从我被要求的视角来看，' });
+      })())
+      await Promise.all(promiseFunctions)
+      display()
+      let summerize = { title: '总结', content: returns.map(i => "**《" + i.title + "》**\n" + i.result).join('\n---\n'), result: '……' }
+      returns.push(summerize)
+      await send_raw(summerize.content, '', [{ role: 'system', content: '根据下面内容，回答问题：' + s.replace(/\r\n/g, "\n") }], (message) => {
+        summerize.result = message;
+        display()
+      }, { old: '' })
+      console.log(promiseFunctions, returns)
+      // await send_raw(s.replace(/\r\n/g, "\n"), keyword, QA_history, (message) => {
+      //   current_session.content = addition_args.old + message;
+
+      // }, addition_args);
       app.loading = false;
       save_history();
       if (is_abord) throw new MyException("已中断");
@@ -715,26 +688,7 @@
     };
 
     let tts_start_index = 0
-    speak_manager = (s, isloading = false) => {
-      let stop_index = s.slice(tts_start_index).search(/[，\n。！？：]/) + tts_start_index
-      let text_to_speak
-      if (stop_index >= tts_start_index) {
-        text_to_speak = s.slice(tts_start_index, stop_index + 1)
-        tts_start_index = stop_index + 1
-        if (!isloading) setTimeout(() => speak_manager(s, isloading = isloading))
-      } else {
-        if (isloading) return
-        text_to_speak = s.slice(tts_start_index)
-        tts_start_index = 0
-      }
-      if (text_to_speak.replace(/[，\n。！？：]/g, '').length == 0) return
-      console.log('[speak]', text_to_speak)
-      speak(text_to_speak)
-    }
-    // 覆盖 console.warn 函数以不执行任何操作
-    console.warn = function () { };
   </script>
-  <script src="wd_sdk.js"></script>
   <script>
     alert = (text) => {
       app.snackbar_text = text; //.replace(/\n/g,"<br>")
@@ -742,9 +696,34 @@
     }
 
     save_history = () => {
-      localStorage["rwkv_chat_history"] = JSON.stringify(app.chat);
+      localStorage["MoSAG_chat_history"] = JSON.stringify(app.chat);
     };
+    s = `物理学视角
+请从物理学第一性原理出发，结合能量守恒、场论和量子力学框架分析该问题。需考虑：① 系统的最小作用量原理如何体现 ② 关键参数的量纲分析及无量纲化处理 ③ 是否存在对称性破缺现象 ④ 实验观测的可行性验证路径 ⑤ 是否存在跨尺度耦合效应
 
+化学视角
+请基于化学键理论、反应动力学和热力学定律展开推演。需包含：① 物质转化过程中的电子转移路径 ② 活化能垒的量化计算方法 ③ 催化剂设计的分子轨道考量 ④ 光谱特征峰与物质结构的对应关系 ⑤ 绿色化学原则的适用性评估
+
+生物学视角
+请运用进化论、系统生物学和分子遗传学方法论进行探讨。需涵盖：① 表型-基因型关联的数学模型 ② 自然选择压力下的适应性景观 ③ 生物大分子相互作用的网络拓扑 ④ 生态位分化机制的能量成本 ⑤ 合成生物学改造的伦理边界
+
+人文科学视角
+请结合诠释学、批判理论和文化比较方法展开分析。需包含：① 符号系统的权力话语建构 ② 历史语境中的意义嬗变轨迹 ③ 跨文化传播的接受美学差异 ④ 社会记忆的仪式化再生产机制 ⑤ 技术伦理的正义性评价框架
+
+计算科学视角
+请建立基于计算复杂性和算法范式的分析模型。需考虑：① 问题空间的NP完备性证明 ② 启发式算法的收敛性保证 ③ 数据表征的维度诅咒问题 ④ 分布式计算的通信复杂度 ⑤ 对抗样本的鲁棒性验证
+
+数学视角
+请采用公理化体系构建形式化证明，重点关注：① 同构映射的存在性证明 ② 拓扑空间的性质保持条件 ③ 随机过程的鞅表示定理 ④ 代数结构的范畴论表述 ⑤ 非标准分析的超实数构造
+
+工程学视角
+请基于设计约束和失效模式展开系统分析，需包括：① 容错机制的安全余量计算 ② 人机交互的认知负荷评估 ③ 材料疲劳的S-N曲线拟合 ④ 控制系统的李雅普诺夫稳定性 ⑤ 技术成熟度(TRL)的升级路径
+
+环境科学视角
+请建立物质流-能量流耦合模型，重点考察：① 生物地球化学循环的扰动阈值 ② 生态服务价值的贴现率争议 ③ 污染物的生物放大系数 ④ 气候反馈回路的迟滞效应 ⑤ 适应路径的韧性评估指标`
+    l = s.split('\n\n')
+    app.dbs = l.map(i => ({ title: i.split('\n')[0], content: i.split('\n')[1] }))
+    // app.selected_dbs_title = app.dbTitles
   </script>
 </body>
 

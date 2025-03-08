@@ -12,7 +12,7 @@ templates = {
     begin_think_prompt: "<think>\n",
 }
 
-templates.stops = [templates.eos + templates.user, templates.eos + templates.assistant,templates.eos]
+templates.stops = [templates.eos + templates.user, templates.eos + templates.assistant, templates.eos]
 
 make_prompt = (input, old = '', system = '', functions = []) => {
     let prompt = ''
@@ -42,6 +42,7 @@ send_raw = async (prompt, prompt2, history, on_llm_message = alert, args = {}) =
         on_llm_message,
         args = args)
 }
+let last_cost = []
 send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
     controller = new AbortController()
     const res = await fetch(llm_server + "", {
@@ -56,8 +57,8 @@ send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
             "stop": stop,
             "sampler_override": {
                 "type": "Nucleus", "top_p": app.top_p || 0.5,
-                "top_k": 128, "temperature": app.temperature || 0.8, "presence_penalty": 0.6,
-                "frequency_penalty": 0.6, "penalty": 800, "penalty_decay": 0.99654026
+                "top_k": 128, "temperature": app.temperature || 0.8, "presence_penalty": 0.1,
+                "frequency_penalty": 0.8, "penalty": 800, "penalty_decay": 0.99654026
             }
 
         }, args)),
@@ -66,6 +67,21 @@ send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
     let result = ''
     const decoder = new TextDecoder();
     const reader = res.body.getReader();
+    let last_token_time = 0
+    function tick() {
+        if (last_token_time == 0) last_token_time = Date.now()
+        else {
+            let now = Date.now()
+            let cost = now - last_token_time
+            last_cost.push(cost)
+            if (last_cost.length > 30) last_cost.shift()
+            let avg_cost = 0
+            last_cost.forEach(v => avg_cost += v)
+            avg_cost /= last_cost.length
+            app.TPS = 1000 / avg_cost
+            last_token_time = now
+        }
+    }
     const readChunk = async () => {
         return reader.read().then(async ({ value, done }) => {
             value = decoder.decode(value);
@@ -81,6 +97,7 @@ send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
                         let payload = JSON.parse(chunk);
                         let content = payload.choices[0].delta.content;
                         if (content) {
+                            tick()
                             result += content
                             onmessage(result)
                         }
@@ -413,3 +430,54 @@ del_rtst_memory = async (name = '', no_prefix = false) => {
 //         navigator.serviceWorker.register('/sw.js');
 //     });
 // }
+
+if (typeof markdownit != 'undefined') {
+
+    let md = new markdownit({
+        highlight: function (str, lang) {
+            // if(lang=='bash')lang='Bash'
+            // console.log(str, lang)
+            if (lang && hljs.getLanguage(lang)) {
+                try {
+                    return (
+                        '<pre class="hljs"><code>' +
+                        hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+                        "</code></pre>"
+                    );
+                } catch (__) { }
+            }
+            return (
+                '<pre class="hljs"><code>' +
+                md.utils.escapeHtml(str) +
+                "</code></pre>"
+            );
+        },
+    });
+    md2html = (content) => {
+        // return conent
+        content = String(content).replace(/<think>\n+<\/think>\n+/, '');
+        let s = content.split("</think>")
+        if (s.length == 1) {
+
+            if (content.indexOf("<think>") > -1)
+                return "<think>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"').replace(/[\r\n]+/g, "<br>") + "</think>"
+            return md.render(content.replace(/[\r\n]+!$/g, "\n\n")).replace(/<a /g, '<a target="_blank"')
+        }
+        if (s.length > 2) {
+            return md.render(content.replace(/[\r\n]+!$/g, "\n\n")).replace(/<a /g, '<a target="_blank"')
+        }
+        return "<think><br>" + md.render(s[0].replace("<think>", '')).replace(/<a /g, '<a target="_blank"') + "</think>" + md.render(s[1].replace(/[\r\n]+!$/g, "\n\n")).replace(/<a /g, '<a target="_blank"')
+    }
+
+}
+
+load_models = async () => {
+    let server_models = await fetch("/api/models/info");
+    server_models = await server_models.json();
+    let name=server_models.reload.model_path.split(/[\/\\]/)
+    name=name[name.length-1]
+    server_models = [{ name: name, use: true }]
+    app.server_models = window.server_models = server_models
+
+};
+load_models();

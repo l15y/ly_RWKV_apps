@@ -102,11 +102,6 @@
       width: 100%;
     }
 
-    /* 
-    footer {
-      padding-bottom: 54px !important;
-    } */
-
     .v-tabs {
       position: fixed !important;
       bottom: 0;
@@ -115,8 +110,9 @@
     }
 
     html,
-    .v-window__container {
-      background-color: #0001;
+    .v-window__container,
+    .chatContent {
+      background-color: #f0f0f0;
     }
 
     .v-tabs-items {
@@ -245,7 +241,6 @@
       <v-toolbar v-if="show_header" style="opacity: 80%">
         <v-app-bar-nav-icon @click.stop="drawer = !drawer"></v-app-bar-nav-icon>
         <v-toolbar-title style="font-size: xx-large; font-weight: bolder;color: black;">自由对话</v-toolbar-title>
-        <b style="color: #0000002b;display: inline-block;">{{modele_name}}</b>
         <v-spacer></v-spacer>
         <div class="chat_toolbar">
           <b style="
@@ -318,6 +313,14 @@
             </template>
             <span>重试</span>
           </v-tooltip>
+          <v-tooltip bottom v-if="(!loading)&&(chat.length>0)">
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon :color="color" v-bind="attrs" v-on="on" @click="copyChatContentToClipboard()" large>
+                mdi-file-png-box
+              </v-icon>
+            </template>
+            <span>截图</span>
+          </v-tooltip>
           <v-tooltip bottom>
             <template v-slot:activator="{ on, attrs }">
               <div v-bind="attrs" v-on="on">
@@ -330,58 +333,63 @@
           </v-tooltip>
         </div>
       </v-toolbar>
-      <br /><br /><br />
-      <div v-for="(current_conversation, index) in chat" :key="index"
-        :class="['d-flex flex-row align-center my-2', current_conversation.role == 'User' ? 'justify-end': null]">
-        <span v-if="current_conversation.role == 'User'" class="ask"
-          v-text="current_conversation.keyword||current_conversation.content"></span>
-        <v-hover v-slot="{ hover }">
-          <div style="margin-bottom: auto;">
-            <v-avatar :class="current_conversation.role == 'User' ? 'user-avatar': 'bot-avatar'" size="36" class="头像">
-              <span>{{ {User:"问",Assistant:'答'}[current_conversation.role]
-                }}</span>
-            </v-avatar>
-            <br />
-            <v-expand-transition>
-              <div v-if="hover" class="float">
-                <v-icon v-if="!loading" large text :color="color"
-                  @click="delete_current_conversation(current_conversation)">
-                  mdi-delete
-                </v-icon>
+      <br />
+      <br />
+      <br />
+      <div class="chatContent">
+        <div v-for="(current_conversation, index) in chat" :key="index"
+          :class="['d-flex flex-row align-center my-2', current_conversation.role == 'User' ? 'justify-end': null]">
+          <span v-if="current_conversation.role == 'User'" class="ask"
+            v-text="current_conversation.keyword||current_conversation.content"></span>
+          <v-hover v-slot="{ hover }">
+            <div style="margin-bottom: auto;">
+              <v-avatar :class="current_conversation.role == 'User' ? 'user-avatar': 'bot-avatar'" size="36" class="头像">
+                <span>{{ {User:"问",Assistant:'答'}[current_conversation.role]
+                  }}</span>
+              </v-avatar>
+              <br />
+              <v-expand-transition>
+                <div v-if="hover" class="float">
+                  <v-icon v-if="!loading" large text :color="color"
+                    @click="delete_current_conversation(current_conversation)">
+                    mdi-delete
+                  </v-icon>
 
-                <v-icon large text :color="color" @click="copy(current_conversation.content)">
-                  mdi-content-copy
-                </v-icon>
-                <v-icon large text :color="color" @click="edit(current_conversation)">
-                  mdi-pencil
-                </v-icon>
-              </div>
-            </v-expand-transition>
-          </div>
-        </v-hover>
+                  <v-icon large text :color="color" @click="copy(current_conversation.content)">
+                    mdi-content-copy
+                  </v-icon>
+                  <v-icon large text :color="color" @click="edit(current_conversation)">
+                    mdi-pencil
+                  </v-icon>
+                </div>
+              </v-expand-transition>
+            </div>
+          </v-hover>
 
-        <span v-if="current_conversation.role != 'User'" class="answer">
-          <div v-html="md2html(current_conversation.content)"></div>
-          <template style="margin-top: 10px">
-            <v-tooltip bottom v-for="source in current_conversation.sources" :max-width="500">
-              <template v-slot:activator="{ on, attrs }">
-                <div v-bind="attrs" v-on="on" style="margin: 3px">
-                  <v-btn outlined style="
+          <span v-if="current_conversation.role != 'User'" class="answer">
+            <div v-html="md2html(current_conversation.content)"></div>
+            <template style="margin-top: 10px">
+              <v-tooltip bottom v-for="source in current_conversation.sources" :max-width="500">
+                <template v-slot:activator="{ on, attrs }">
+                  <div v-bind="attrs" v-on="on" style="margin: 3px">
+                    <v-btn outlined style="
                             margin-top: 0px;
                             max-width: -webkit-fill-available;
                             overflow-x: hidden;
                           " :color="color" rounded="lg"
-                    @click='source.url?window.open(source.url,"_blank"):source.click()' x-small>
-                    <span class="d-inline-block text-truncate" style="max-width: 150px">
-                      {{source.title}}
-                    </span>
-                  </v-btn>
-                </div>
-              </template>
-              <span v-html="source.content"></span>
-            </v-tooltip>
-          </template>
-        </span>
+                      @click='source.url?window.open(source.url,"_blank"):source.click()' x-small>
+                      <span class="d-inline-block text-truncate" style="max-width: 150px">
+                        {{source.title}}
+                      </span>
+                    </v-btn>
+                  </div>
+                </template>
+                <span v-html="source.content"></span>
+              </v-tooltip>
+            </template>
+          </span>
+        </div>
+        <b style="text-align: center;width: 100%;display: block;color: #00000045;">{{modele_name}}</b>
       </div>
       <br /><br /><br /><br /><br /><br /><br /><br /><br />
       <v-footer fixed class="pa-2">
@@ -566,7 +574,7 @@
         modele_name() {
           try {
 
-            return this.server_models.filter(i => i.use)[0].name
+            return this.server_models.filter(i => i.use)[0].name.replace('.st', '').replace('.prefab', '') + `  (temp:${this.temperature}  top_p:${this.top_p})`
           } catch (error) {
 
           }
@@ -742,6 +750,44 @@
             on_message(s)
           },
           args = args)
+      }
+    }
+
+  </script>
+  <script src="static/html2canvas.min.js"></script>
+
+  <script>
+    async function copyChatContentToClipboard() {
+      try {
+        // 1. 获取目标元素
+        const element = document.querySelector('.chatContent');
+
+        // 2. 使用 html2canvas 生成 canvas
+        const canvas = await html2canvas(element, {
+          useCORS: true,      // 允许跨域图像
+          allowTaint: true,   // 允许跨域图像（根据需求二选一）
+          logging: false      // 关闭日志输出
+        });
+
+        // 3. 将 canvas 转换为 Blob
+        canvas.toBlob(async (blob) => {
+          try {
+            // 4. 复制到剪贴板
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                [blob.type]: blob
+              })
+            ]);
+            alert('截图已复制到剪贴板！');
+          } catch (error) {
+            console.error('复制失败:', error);
+            alert('复制失败，请确保浏览器支持该功能');
+          }
+        }, 'image/png');
+
+      } catch (error) {
+        console.error('截图失败:', error);
+        alert('截图生成失败');
       }
     }
 

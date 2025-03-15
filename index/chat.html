@@ -395,6 +395,10 @@
       <v-footer fixed class="pa-2">
 
         <v-row no-gutters>
+          <v-col cols="12" md="12" v-if="states.length>0">
+            <v-combobox v-model="selected_state" :items="stateNames" label="选择state" chips dense></v-combobox>
+
+          </v-col>
           <v-col cols="8" md="11">
             <v-textarea hide-details no-resize rows="3" :loading="loading" :placeholder="func_mode.description" solo
               @keypress.enter="submit" v-model="question">
@@ -565,6 +569,8 @@
           b批量上传中: false,
           i批量上传进度: 0,
           nodes: [],
+          selected_state: 'none',
+          states: [],
         };
       },
       methods: {
@@ -579,7 +585,16 @@
 
           }
           return ""
-        }
+        },
+        stateNames() {
+          try {
+
+            return this.states.map(i => i.name).concat("none")
+          } catch (error) {
+
+          }
+          return ['none']
+        },
       }
     });
     //获取用户输入
@@ -656,6 +671,13 @@
     // 将用户的输入发送到服务器并更新 app 的 chat 数组
     // 参数s为用户输入的内容，keyword为用户输入的关键词，show为是否显示用户输入的内容，sources为知识库的来源
     send = async (s, keyword = "", show = true, sources = [], addition_args = {}) => {
+      try {
+
+        let state_id = app.states.filter(i => app.selected_state == i.name)[0].id
+        addition_args.state = state_id
+      } catch (error) {
+        console.log(error)
+      }
       addition_args.old = app.noCOT ? templates.skip_think_prompt : ""
       addition_args.old = app.forceCOT ? templates.begin_think_prompt + (app.forceZhCOT ? "嗯，" : "Okay,") : ""
       app.question = ''
@@ -691,7 +713,15 @@
       }
       setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 0);
       let last_token_time = Date.now()
-      await send_raw(s.replace(/\r\n/g, "\n"), keyword, QA_history, (message) => {
+      await send_raw(s.replace(/\r\n/g, "\n"), keyword, QA_history.map(i => {
+        if (i.role == "Assistant") {
+          let s = i.content.split("</think>")
+          if (s.length > 1) {
+            return { role: "Assistant", content: s[1], sources: i.sources };
+          }
+        }
+        return i
+      }), (message) => {
         current_session.content = addition_args.old + message;
 
       }, addition_args);

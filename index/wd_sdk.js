@@ -52,13 +52,13 @@ send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
         },
         body: JSON.stringify(Object.assign({
             prompt: [prompt],
-            max_tokens: 2000,
+            max_tokens: app.max_length || 2000,
             stream: true,
             "stop": stop,
             "sampler_override": {
                 "type": "Nucleus", "top_p": app.top_p || 0.5,
-                "top_k": 128, "temperature": app.temperature || 0.8, "presence_penalty": 0.1,
-                "frequency_penalty": 0.8, "penalty": 800, "penalty_decay": 0.99654026
+                "top_k": 32, "temperature": app.temperature || 0.8, "presence_penalty": 0.6,
+                "frequency_penalty": 0.9, "penalty": 800, "penalty_decay": 0.99654026
             }
 
         }, args)),
@@ -100,6 +100,13 @@ send_prompt = async (prompt, stop, onmessage = alert, args = {}) => {
                             tick()
                             result += content
                             onmessage(result)
+                            for (s of stop) {
+                                if (result.indexOf(s) > -1) {
+                                    controller.abort()
+                                    abort_reaon = s
+                                    return
+                                }
+                            }
                         }
                         if (payload.choices[0].finish_reason == "stop") return
                     } catch {
@@ -437,17 +444,19 @@ if (typeof markdownit != 'undefined') {
         highlight: function (str, lang) {
             // if(lang=='bash')lang='Bash'
             // console.log(str, lang)
+            let before = ''
+            if (lang == 'html') before = "<button class='runButton' onclick='runHTML(this)'>运行</button>"
             if (lang && hljs.getLanguage(lang)) {
                 try {
                     return (
-                        '<pre class="hljs"><code>' +
+                        `<pre class="hljs">` + before + `<code>` +
                         hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
                         "</code></pre>"
                     );
                 } catch (__) { }
             }
             return (
-                '<pre class="hljs"><code>' +
+                `<pre class="hljs">` + before + `<code>` +
                 md.utils.escapeHtml(str) +
                 "</code></pre>"
             );
@@ -470,12 +479,27 @@ if (typeof markdownit != 'undefined') {
     }
 
 }
+function runHTML(e) {
+    const code = e.parentNode.children[1].innerText
 
+    // 尝试打开新窗口（可能会被浏览器拦截）
+    const newWindow = window.open('', '_blank');
+    if (!newWindow) {
+        alert('请允许弹出窗口后重试！');
+        return;
+    }
+    // 将代码写入新窗口
+    newWindow.document.open();
+    newWindow.document.write(code);
+    newWindow.document.close();
+}
 load_models = async () => {
     let server_models = await fetch("/api/models/info");
     server_models = await server_models.json();
-    let name=server_models.reload.model_path.split(/[\/\\]/)
-    name=name[name.length-1]
+    app.states = server_models.states
+
+    let name = server_models.reload.model_path.split(/[\/\\]/)
+    name = name[name.length - 1]
     server_models = [{ name: name, use: true }]
     app.server_models = window.server_models = server_models
 

@@ -66,6 +66,15 @@
 				</v-tooltip>
 				<v-tooltip bottom>
 					<template v-slot:activator="{ on, attrs }">
+						<v-btn icon @click="f续写([])" v-bind="attrs" v-on="on" :loading="loading" color="blue"
+							:disabled="s内容.length<10">
+							<v-icon>mdi-arrow-down</v-icon>
+						</v-btn>
+					</template>
+					<span>续写</span>
+				</v-tooltip>
+				<v-tooltip bottom>
+					<template v-slot:activator="{ on, attrs }">
 						<v-btn icon @click="f续写(['\n'])" v-bind="attrs" v-on="on" :loading="loading" color="blue"
 							:disabled="s内容.length<10">
 							<v-icon>mdi-arrow-collapse-down</v-icon>
@@ -94,7 +103,7 @@
 			<br>
 			<br>
 			<br>
-			<v-textarea class="pa-5" counter :loading="loading" auto-grow solo v-model="s内容" label="内容"
+			<v-textarea class="pa-5" counter :loading="loading" :auto-grow="!loading" solo v-model="s内容" label="内容"
 				:disabled="loading" rows="10" hide-details="auto"></v-textarea>
 			<v-snackbar v-model="b显示提示文本" :timeout="3000" style="white-space: pre-line">{{s提示文本}}</v-snackbar>
 		</v-app>
@@ -113,7 +122,7 @@
 				s提示文本: "",
 				temperature: 2,
 				top_p: 0.5,
-				max_length: 3000,
+				max_length: 30000,
 				new_content: '',
 				l风格: '灵活 适中 稳定'.split(' '),
 				i风格: 1,
